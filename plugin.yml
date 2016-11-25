@@ -1,0 +1,21 @@
+main: coathar.trivia.triviabot.Main
+name: TriviaBot
+version: 1.0
+author: Coathar
+description: A bot to make trivia questions
+commands:
+  triviastart:
+    description: Starts the bot for a question
+    usage: /triviastart
+    permisison: triviabot.start
+    permission-message: You do not have permission to do that!
+  triviareload:
+    description: Reloads the trivia config
+    usage: /triviareload
+    permission: triviabot.reload
+    permission-message: You do not have permission to do that!
+  triviabroadcast:
+    description: Broadcast Trivia!
+    usage: /triviabroadcast
+    permission: triviabot.start
+    permission-message: You do not have permission to do that!
