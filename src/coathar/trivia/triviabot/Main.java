@@ -25,12 +25,13 @@ public class Main extends JavaPlugin {
 	public static Main plugin;
 	private Logger log = Logger.getLogger("Minecraft");
 	public static boolean triviaActive = false;
+	public static boolean triviaLoop = false;
 	public static int r = 0;
 	
 	@Override
 	public void onEnable() {
 		plugin = this;
-		Bukkit.getPluginManager().registerEvents(new chatListener(), this);
+		Bukkit.getPluginManager().registerEvents(new chatListener(), this, triviaQuestion());
 		if (!(new File(getDataFolder(), "config.yml").exists())) {
 			List<String> defaultQuestions = Arrays.asList("These are where you locate questions","They correspond with the answers below");
 			config.set("Questions", defaultQuestions);
@@ -57,6 +58,19 @@ public class Main extends JavaPlugin {
 				triviaQuestion();
 			}
 			return true;
+		}
+		if (command.getName().equalsIgnoreCase("trivialoop")) {
+			sender.sendMessage("Trivia loop started! Use /triviastop to stop the loop");
+			if(triviaActive) {
+				triviaLoop = true;
+			} else {
+				triviaLoop = true;
+				triviaQuestion();
+			}
+		}
+		if (command.getName().equalsIgnoreCase("triviastop")) {
+			sender.sendMessage("Trivia Loop stopped!");
+			triviaLoop = false;
 		}
 		if (command.getName().equalsIgnoreCase("triviareload")) {
 			sender.sendMessage("Trivia Config Reloaded");

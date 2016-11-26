@@ -19,6 +19,9 @@ public class chatListener implements Listener {
 					public void run() {
 						Bukkit.broadcastMessage(ChatColor.GOLD + "[" + ChatColor.YELLOW + "Trivia Bot" + ChatColor.GOLD + "] " + ChatColor.GREEN + event.getPlayer().getName() + ChatColor.DARK_GREEN + " wins! The correct answer was: " + ChatColor.GREEN + Main.answers.get(Main.r));
 						Main.triviaActive = false;
+						if (Main.triviaActive) {
+							triviaQuestion();
+						}
 					}
 				}.runTaskLater(Main.plugin, 20);
 			}
