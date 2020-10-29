@@ -9,13 +9,13 @@ commands:
     usage: /triviastart
     permisison: triviabot.start
     permission-message: You do not have permission to do that!
+  triviatoggleloop:
+    description: toggles looping of questions. Will start trivia if the loop is toggled to on and trivia has not started.
+    usage: /toggletrivialoop
+    permission: triviabot.start
+    permission-message: You do not have permission to do that!
   triviareload:
     description: Reloads the trivia config
     usage: /triviareload
     permission: triviabot.reload
-    permission-message: You do not have permission to do that!
-  triviabroadcast:
-    description: Broadcast Trivia!
-    usage: /triviabroadcast
-    permission: triviabot.start
     permission-message: You do not have permission to do that!
