@@ -28,6 +28,7 @@ public class TriviaHandler implements Listener
 	public TriviaHandler()
 	{
 		this.m_RandomGeneration = new Random();
+		Bukkit.getPluginManager().registerEvents(this, TriviaBot.getInstance());
 	}
 
 	/**
