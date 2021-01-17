@@ -1,4 +1,4 @@
-package coathar.trivia.triviabot;
+package com.coathar.trivia;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -11,6 +11,7 @@ import net.md_5.bungee.api.ChatColor;
 
 import java.util.List;
 import java.util.Random;
+import java.util.logging.Level;
 
 public class TriviaHandler implements Listener
 {
@@ -18,8 +19,8 @@ public class TriviaHandler implements Listener
 
 	private Random  m_RandomGeneration;
 
-	private List<String> m_Questions;
-	private List<String> m_Answers;
+	private List<String> 	   m_Questions;
+	private List<List<String>> m_Answers;
 
 	private boolean m_IsTriviaActive;
 	private boolean m_IsTriviaLooped;
@@ -49,10 +50,17 @@ public class TriviaHandler implements Listener
 	private void answerQuestion(Player player)
 	{
 		Bukkit.broadcastMessage(ChatColor.GOLD + "[" + ChatColor.YELLOW + "Trivia Bot" + ChatColor.GOLD + "] " + ChatColor.GREEN + player.getName() +
-				ChatColor.DARK_GREEN + " wins! The correct answer was: " + ChatColor.GREEN + this.m_Answers.get(this.m_QuestionId));
+				ChatColor.DARK_GREEN + " wins! The correct answer was: " + ChatColor.GREEN + this.m_Answers.get(this.m_QuestionId).get(0));
 
 		if(this.m_IsTriviaLooped)
-			this.triviaQuestion();
+			new BukkitRunnable()
+			{
+				@Override
+				public void run()
+				{
+					TriviaHandler.this.triviaQuestion();
+				}
+			}.runTaskLater(TriviaBot.getInstance(), 40);
 	}
 	
 	@EventHandler
@@ -61,7 +69,7 @@ public class TriviaHandler implements Listener
 		Player player  = event.getPlayer();
 		String message = event.getMessage();
 
-		if(event.isAsynchronous() && this.m_IsTriviaActive && message.equalsIgnoreCase(this.m_Answers.get(this.m_QuestionId)))
+		if(event.isAsynchronous() && this.m_IsTriviaActive && isAnswer(message))
 		{
 			this.m_IsTriviaActive = false;
 
@@ -77,14 +85,37 @@ public class TriviaHandler implements Listener
 	}
 
 	/**
+	 * Loops over all answers of the current question and compares to the message ignoring case
+	 * @param message The message to check for an answer
+	 * @return Whether or not the message matches an answer
+	 */
+	private boolean isAnswer(String message)
+	{
+		// Check to see if the answers list contains the key
+		if(this.m_Answers.size() > this.m_QuestionId)
+		{
+			// Loop over answers and compare
+			for(String answer : this.m_Answers.get(this.m_QuestionId))
+			{
+				if(answer.equalsIgnoreCase(message))
+					return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
 	 * Loads the questions and answers to the handler. Resets handler state so players can't answer questions with wrong answers.
 	 * @param questions The list of questions
 	 * @param answers   The list of answers
 	 */
-	void loadTrivia(List<String> questions, List<String> answers)
+	void loadTrivia(List<String> questions, List<List<String>> answers)
 	{
 		this.m_Questions = questions;
 		this.m_Answers   = answers;
+
+		TriviaBot.getInstance().getLogger().log(Level.INFO, "Loaded " + questions.size() + " questions and " + answers.size() + " answers.");
 
 		// Reload safety
 		if(this.m_IsTriviaActive)

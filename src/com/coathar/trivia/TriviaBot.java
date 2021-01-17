@@ -1,13 +1,14 @@
-package coathar.trivia.triviabot;
+package com.coathar.trivia;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.io.File;
 import java.util.Arrays;
 import java.util.logging.Logger;
 
-import coathar.trivia.triviabot.commands.TriviaReload;
-import coathar.trivia.triviabot.commands.TriviaStart;
-import coathar.trivia.triviabot.commands.TriviaToggleLoop;
+import com.coathar.trivia.commands.TriviaReload;
+import com.coathar.trivia.commands.TriviaStart;
+import com.coathar.trivia.commands.TriviaToggleLoop;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -41,30 +42,37 @@ public class TriviaBot extends JavaPlugin {
 			this.m_Logger.warning("No configuration file was found. Dummy questions were loaded. Reload after filling in questions.");
 		}
 
-		List<String> questions = this.m_Config.getStringList("Questions");
-		List<String> answers   = this.m_Config.getStringList("Answers");
-
 		this.m_TriviaHandler = TriviaHandler.getInstance();
-		this.m_TriviaHandler.loadTrivia(questions, answers);
+		this.loadTriviaFromConfig();
 
 		this.registerCommands();
 
 		this.m_Logger.info("TriviaBot is now enabled!");
 	}
 
+	private void loadTriviaFromConfig()
+	{
+		List<String> 	   questions = this.m_Config.getStringList("questions");
+		List<List<String>> answers   = new ArrayList<List<String>>();
+
+		for(String answer : this.m_Config.getStringList("answers"))
+		{
+			List<String> answerSplit = new ArrayList<String>(Arrays.asList(answer.split("~")));
+			answers.add(answerSplit);
+		}
+
+		this.m_TriviaHandler.loadTrivia(questions, answers);
+	}
+
 	/**
 	 * Reloads the trivia questions from the configuration.
 	 */
-	@Override
-	public void reloadConfig()
+	public void reloadQuestions()
 	{
+		// Reload the config first
 		this.reloadConfig();
 		this.m_Config = this.getConfig();
-
-		List<String> questions = this.m_Config.getStringList("Questions");
-		List<String> answers   = this.m_Config.getStringList("Answers");
-
-		this.m_TriviaHandler.loadTrivia(questions, answers);
+		this.loadTriviaFromConfig();
 	}
 
 	/**

@@ -1,6 +1,6 @@
-package coathar.trivia.triviabot.commands;
+package com.coathar.trivia.commands;
 
-import coathar.trivia.triviabot.TriviaBot;
+import com.coathar.trivia.TriviaBot;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -11,7 +11,7 @@ public class TriviaReload implements CommandExecutor
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args)
     {
-        TriviaBot.getInstance().reloadConfig();
+        TriviaBot.getInstance().reloadQuestions();
 
         sender.sendMessage(ChatColor.GREEN + "TriviaBot reloaded.");
 

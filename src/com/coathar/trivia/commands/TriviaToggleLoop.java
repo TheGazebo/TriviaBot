@@ -1,6 +1,6 @@
-package coathar.trivia.triviabot.commands;
+package com.coathar.trivia.commands;
 
-import coathar.trivia.triviabot.TriviaHandler;
+import com.coathar.trivia.TriviaHandler;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;

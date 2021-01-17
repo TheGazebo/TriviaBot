@@ -1,4 +1,4 @@
-main: coathar.trivia.triviabot.Main
+main: com.coathar.trivia.TriviaBot
 name: TriviaBot
 version: 1.0
 author: Coathar
