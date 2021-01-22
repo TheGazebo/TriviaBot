@@ -97,6 +97,9 @@ public class TriviaHandler implements Listener
 			// Loop over answers and compare
 			for(String answer : this.m_Answers.get(this.m_QuestionId))
 			{
+				if(answer.charAt(0) == '!' && answer.length() > 1)
+					answer = answer.substring(1);
+
 				if(answer.equalsIgnoreCase(message))
 					return true;
 			}
