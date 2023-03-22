@@ -76,7 +76,7 @@ public class TriviaHandler implements Listener
 		{
 			// Select the appropriate category and then a random trivia question within it
 			List<Trivia> questionsToUse = this.m_TriviaQuestions.get(category);
-			int index = this.m_RandomGeneration.nextInt(this.m_TriviaQuestions.size());
+			int index = this.m_RandomGeneration.nextInt(questionsToUse.size());
 			Trivia nextTrivia = questionsToUse.get(index).clone(); // Make sure to clone in order to avoid flagging the questions in the list.
 
 			TriviaFireEvent event = new TriviaFireEvent(nextTrivia);
@@ -174,7 +174,7 @@ public class TriviaHandler implements Listener
 	 */
 	public boolean isTriviaActive()
 	{
-		return !this.m_CurrentTrivia.isSolved();
+		return this.m_CurrentTrivia != null && !this.m_CurrentTrivia.isSolved();
 	}
 
 	/**

@@ -2,6 +2,7 @@ package com.coathar.trivia;
 
 import java.util.*;
 import java.io.File;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.coathar.trivia.commands.TriviaReload;
@@ -59,25 +60,33 @@ public class TriviaBot extends JavaPlugin {
 	{
 		Map<String, List<Trivia>> triviaMap = new HashMap<>();
 
-		for(String label : this.m_Config.getKeys(false))
+		for(String category : this.m_Config.getKeys(false))
 		{
 			List<Trivia> trivia = new ArrayList<>();
+			ConfigurationSection categorySection = this.m_Config.getConfigurationSection(category);
 
-			for(String triviaKey : this.m_Config.getConfigurationSection(label).getKeys(false))
+			for(String triviaKey : this.m_Config.getConfigurationSection(category).getKeys(false))
 			{
-				ConfigurationSection triviaQuestion = this.m_Config.getConfigurationSection(triviaKey);
+				ConfigurationSection triviaQuestion = categorySection.getConfigurationSection(triviaKey);
 
-				String question = triviaQuestion.getString("question");
-				List<String> answers = triviaQuestion.getStringList("answers");
+				try
+				{
+					String question = triviaQuestion.getString("question");
+					List<String> answers = triviaQuestion.getStringList("answers");
 
-				// Avoid empty trivia questions
-				if(question.isEmpty() || answers.size() == 0)
-					continue;
+					// Avoid empty trivia questions
+					if(question.isEmpty() || answers.size() == 0)
+						continue;
 
-				trivia.add(new Trivia(label, question, answers));
+					trivia.add(new Trivia(category, question, answers));
+				}
+				catch(NullPointerException e)
+				{
+					m_Logger.log(Level.WARNING, "Failed to load trivia question of category " + category + " with key " + triviaKey + ".");
+				}
 			}
 
-			triviaMap.put(label, trivia);
+			triviaMap.put(category, trivia);
 		}
 
 		this.m_TriviaHandler.loadTrivia(triviaMap);
