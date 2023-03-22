@@ -9,6 +9,7 @@ import java.util.logging.Logger;
 import com.coathar.trivia.commands.TriviaReload;
 import com.coathar.trivia.commands.TriviaStart;
 import com.coathar.trivia.commands.TriviaToggleLoop;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -17,9 +18,9 @@ public class TriviaBot extends JavaPlugin {
 	private static volatile TriviaBot m_UniqueInstance;
 
 	private FileConfiguration m_Config;
-	private Logger 			  m_Logger;
-	private TriviaHandler     m_TriviaHandler;
-	
+	private Logger m_Logger;
+	private TriviaHandler m_TriviaHandler;
+
 	@Override
 	public void onEnable()
 	{
@@ -29,13 +30,16 @@ public class TriviaBot extends JavaPlugin {
 		this.m_Config = this.getConfig();
 		this.m_Logger = this.getLogger();
 
+		// If the configuration file does not exist set up a default question to show the user how to format the file.
 		if(!(new File(getDataFolder(), "config.yml").exists()))
 		{
-			List<String> defaultQuestions = Arrays.asList("These are where you locate questions","They correspond with the answers below");
-			this.m_Config.set("Questions", defaultQuestions);
+			this.m_Config.createSection("default");
+			ConfigurationSection questionSection = this.m_Config.getConfigurationSection("defaultLabel").createSection("defaultQuestion");
 
-			List<String> defaultAnswers = Arrays.asList("These are where you locate answers","They correspond with the questions above");
-			this.m_Config.set("Answers", defaultAnswers);
+			questionSection.set("question", "This is a default question.");
+
+			List<String> defaultAnswers = Arrays.asList("This is a default answer", "This is also a default answer");
+			questionSection.set("answers", defaultAnswers);
 
 			saveConfig();
 
@@ -50,18 +54,31 @@ public class TriviaBot extends JavaPlugin {
 		this.m_Logger.info("TriviaBot is now enabled!");
 	}
 
+	/**
+	 * Loads all trivia from the configuration file.
+	 */
 	private void loadTriviaFromConfig()
 	{
-		List<String> 	   questions = this.m_Config.getStringList("questions");
-		List<List<String>> answers   = new ArrayList<List<String>>();
+		List<Trivia> trivia = new ArrayList<>();
 
-		for(String answer : this.m_Config.getStringList("answers"))
+		for(String label : this.m_Config.getKeys(false))
 		{
-			List<String> answerSplit = new ArrayList<String>(Arrays.asList(answer.split("~")));
-			answers.add(answerSplit);
+			for(String triviaKey : this.m_Config.getConfigurationSection(label).getKeys(false))
+			{
+				ConfigurationSection triviaQuestion = this.m_Config.getConfigurationSection(triviaKey);
+
+				String question = triviaQuestion.getString("question");
+				List<String> answers = triviaQuestion.getStringList("answers");
+
+				// Avoid empty trivia questions
+				if(question.isEmpty() || answers.size() == 0)
+					continue;
+
+				trivia.add(new Trivia(label, question, answers));
+			}
 		}
 
-		this.m_TriviaHandler.loadTrivia(questions, answers);
+		this.m_TriviaHandler.loadTrivia(trivia);
 	}
 
 	/**
@@ -76,7 +93,7 @@ public class TriviaBot extends JavaPlugin {
 	}
 
 	/**
-	 * Broadcasts out a question and sets the handler to await an answer
+	 * Broadcasts a question and sets the handler to await an answer
 	 */
 	public void triviaQuestion()
 	{
@@ -103,5 +120,5 @@ public class TriviaBot extends JavaPlugin {
 	{
 		return m_UniqueInstance;
 	}
-	
+
 }

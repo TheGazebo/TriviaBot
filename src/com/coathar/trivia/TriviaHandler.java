@@ -1,5 +1,7 @@
 package com.coathar.trivia;
 
+import com.coathar.trivia.events.TriviaFireEvent;
+import com.coathar.trivia.events.TriviaSolvedEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -19,12 +21,10 @@ public class TriviaHandler implements Listener
 
 	private Random  m_RandomGeneration;
 
-	private List<String> 	   m_Questions;
-	private List<List<String>> m_Answers;
+	private List<Trivia> m_TriviaQuestions;
 
-	private boolean m_IsTriviaActive;
+	private Trivia m_CurrentTrivia;
 	private boolean m_IsTriviaLooped;
-	private int     m_QuestionId;
 
 	public TriviaHandler()
 	{
@@ -33,14 +33,21 @@ public class TriviaHandler implements Listener
 	}
 
 	/**
-	 * Broadcasts out a question and sets the handler to await an answer
+	 * Broadcasts a question and sets the handler to await an answer
 	 */
 	public void triviaQuestion()
 	{
-		this.m_IsTriviaActive     = true;
-		this.m_QuestionId         = this.m_RandomGeneration.nextInt(this.m_Questions.size());
+		int index = this.m_RandomGeneration.nextInt(this.m_TriviaQuestions.size());
+		Trivia nextTrivia = this.m_TriviaQuestions.get(index).clone(); // Make sure to clone in order to avoid flagging the questions in the list.
 
-		Bukkit.broadcastMessage(ChatColor.GOLD + "[" + ChatColor.YELLOW + "Trivia Bot" + ChatColor.GOLD + "] " + ChatColor.DARK_AQUA + "Question: " + ChatColor.AQUA + this.m_Questions.get(this.m_QuestionId));
+		TriviaFireEvent event = new TriviaFireEvent(nextTrivia);
+		Bukkit.getPluginManager().callEvent(event);
+
+		if(!event.isCancelled())
+		{
+			this.m_CurrentTrivia = nextTrivia;
+			Bukkit.broadcastMessage(ChatColor.GOLD + "[" + ChatColor.YELLOW + "Trivia Bot" + ChatColor.GOLD + "] " + ChatColor.DARK_AQUA + "Question: " + ChatColor.AQUA + this.m_CurrentTrivia.getQuestion());
+		}
 	}
 
 	/**
@@ -49,8 +56,11 @@ public class TriviaHandler implements Listener
 	 */
 	private void answerQuestion(Player player)
 	{
+		TriviaSolvedEvent event = new TriviaSolvedEvent(player, this.m_CurrentTrivia);
+		Bukkit.getPluginManager().callEvent(event);
+
 		Bukkit.broadcastMessage(ChatColor.GOLD + "[" + ChatColor.YELLOW + "Trivia Bot" + ChatColor.GOLD + "] " + ChatColor.GREEN + player.getName() +
-				ChatColor.DARK_GREEN + " wins! The correct answer was: " + ChatColor.GREEN + this.m_Answers.get(this.m_QuestionId).get(0));
+				ChatColor.DARK_GREEN + " wins! The correct answer was: " + ChatColor.GREEN + this.m_CurrentTrivia.getAnswers().get(0));
 
 		if(this.m_IsTriviaLooped)
 			new BukkitRunnable()
@@ -62,16 +72,16 @@ public class TriviaHandler implements Listener
 				}
 			}.runTaskLater(TriviaBot.getInstance(), 40);
 	}
-	
+
 	@EventHandler
-	public void playerChat(AsyncPlayerChatEvent event)
+	public void onPlayerChat(AsyncPlayerChatEvent event)
 	{
 		Player player  = event.getPlayer();
 		String message = event.getMessage();
 
-		if(event.isAsynchronous() && this.m_IsTriviaActive && isAnswer(message))
+		if(event.isAsynchronous() && !this.m_CurrentTrivia.isSolved() && this.m_CurrentTrivia.isAnswer(message))
 		{
-			this.m_IsTriviaActive = false;
+			this.m_CurrentTrivia.flagSolved();
 
 			new BukkitRunnable()
 			{
@@ -85,55 +95,19 @@ public class TriviaHandler implements Listener
 	}
 
 	/**
-	 * Loops over all answers of the current question and compares to the message ignoring case
-	 * @param message The message to check for an answer
-	 * @return Whether or not the message matches an answer
+	 * Loads the questions and answers to the handler.
+	 * @param trivia The list of trivia questions to load into the handler.
 	 */
-	private boolean isAnswer(String message)
+	void loadTrivia(List<Trivia> trivia)
 	{
-		// Check to see if the answers list contains the key
-		if(this.m_Answers.size() > this.m_QuestionId)
-		{
-			// Loop over answers and compare
-			for(String answer : this.m_Answers.get(this.m_QuestionId))
-			{
-				if(answer.charAt(0) == '!' && answer.length() > 1)
-					answer = answer.substring(1);
+		this.m_TriviaQuestions = trivia;
 
-				if(answer.equalsIgnoreCase(message))
-					return true;
-			}
-		}
-
-		return false;
-	}
-
-	/**
-	 * Loads the questions and answers to the handler. Resets handler state so players can't answer questions with wrong answers.
-	 * @param questions The list of questions
-	 * @param answers   The list of answers
-	 */
-	void loadTrivia(List<String> questions, List<List<String>> answers)
-	{
-		this.m_Questions = questions;
-		this.m_Answers   = answers;
-
-		TriviaBot.getInstance().getLogger().log(Level.INFO, "Loaded " + questions.size() + " questions and " + answers.size() + " answers.");
-
-		// Reload safety
-		if(this.m_IsTriviaActive)
-			Bukkit.broadcastMessage(ChatColor.RED + "Questions skipped due to reload...");
-
-		this.m_IsTriviaActive = false;
-		this.m_IsTriviaLooped = false;
-
-		if(this.m_QuestionId > this.m_Questions.size())
-			this.m_QuestionId = 0;
+		TriviaBot.getInstance().getLogger().log(Level.INFO, "Loaded " + this.m_TriviaQuestions.size() + " trivia questions.");
 	}
 
 	/**
 	 * Toggles the trivia loop.
-	 * @return Whether or not the trivia is set to loop.
+	 * @return Whether the trivia is set to loop.
 	 */
 	public boolean toggleTriviaLooped()
 	{
@@ -142,14 +116,20 @@ public class TriviaHandler implements Listener
 	}
 
 	/**
-	 * @return Whether or not there is an active trivia question.
+	 * @return Whether there is an active trivia question.
 	 */
-	public boolean isTriviaActive() { return this.m_IsTriviaActive; }
+	public boolean isTriviaActive()
+	{
+		return !this.m_CurrentTrivia.isSolved();
+	}
 
 	/**
-	 * @return Whether or not the trivia is set to loop.
+	 * @return Whether the trivia is set to loop.
 	 */
-	public boolean isTriviaLooped() { return this.m_IsTriviaLooped; }
+	public boolean isTriviaLooped()
+	{
+		return this.m_IsTriviaLooped;
+	}
 
 	public static TriviaHandler getInstance()
 	{
