@@ -11,8 +11,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 import net.md_5.bungee.api.ChatColor;
 
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.logging.Level;
 
 public class TriviaHandler implements Listener
@@ -21,7 +20,7 @@ public class TriviaHandler implements Listener
 
 	private Random  m_RandomGeneration;
 
-	private List<Trivia> m_TriviaQuestions;
+	private Map<String, List<Trivia>> m_TriviaQuestions;
 
 	private Trivia m_CurrentTrivia;
 	private boolean m_IsTriviaLooped;
@@ -32,21 +31,76 @@ public class TriviaHandler implements Listener
 		Bukkit.getPluginManager().registerEvents(this, TriviaBot.getInstance());
 	}
 
+
 	/**
-	 * Broadcasts a question and sets the handler to await an answer
+	 * Broadcasts a question and sets the handler to await an answer.
+	 * Will select from the first defined grouping of trivia questions if no trivia has previously been posted.
+	 * Will select using the previous trivia question's grouping if trivia has been posted.
 	 */
 	public void triviaQuestion()
 	{
-		int index = this.m_RandomGeneration.nextInt(this.m_TriviaQuestions.size());
-		Trivia nextTrivia = this.m_TriviaQuestions.get(index).clone(); // Make sure to clone in order to avoid flagging the questions in the list.
-
-		TriviaFireEvent event = new TriviaFireEvent(nextTrivia);
-		Bukkit.getPluginManager().callEvent(event);
-
-		if(!event.isCancelled())
+		if(this.m_CurrentTrivia != null)
 		{
-			this.m_CurrentTrivia = nextTrivia;
-			Bukkit.broadcastMessage(ChatColor.GOLD + "[" + ChatColor.YELLOW + "Trivia Bot" + ChatColor.GOLD + "] " + ChatColor.DARK_AQUA + "Question: " + ChatColor.AQUA + this.m_CurrentTrivia.getQuestion());
+			this.triviaQuestion(this.m_CurrentTrivia.getLabel());
+		}
+		else
+		{
+			try
+			{
+				this.triviaQuestion(this.getLabels().get(0));
+			}
+			catch(IndexOutOfBoundsException e)
+			{
+				String warningMessage = "No trivia categories found. No trivia has been defined when attempting to start trivia.";
+
+				TriviaBot.getInstance().getLogger().log(Level.WARNING, warningMessage);
+				throw new IndexOutOfBoundsException(warningMessage); // Throw for user feedback for commands.
+			}
+		}
+	}
+
+	/**
+	 * Broadcasts a question and sets the handler to await an answer.
+	 * @param category The category of trivia question to select.
+	 */
+	public void triviaQuestion(String category)
+	{
+		// Use the wrapper function if the provided key is empty.
+		if(category.isEmpty())
+		{
+			this.triviaQuestion();
+			return;
+		}
+
+		try
+		{
+			// Select the appropriate category and then a random trivia question within it
+			List<Trivia> questionsToUse = this.m_TriviaQuestions.get(category);
+			int index = this.m_RandomGeneration.nextInt(this.m_TriviaQuestions.size());
+			Trivia nextTrivia = questionsToUse.get(index).clone(); // Make sure to clone in order to avoid flagging the questions in the list.
+
+			TriviaFireEvent event = new TriviaFireEvent(nextTrivia);
+			Bukkit.getPluginManager().callEvent(event);
+
+			if(!event.isCancelled())
+			{
+				this.m_CurrentTrivia = nextTrivia;
+				Bukkit.broadcastMessage(ChatColor.GOLD + "[" + ChatColor.YELLOW + "Trivia Bot" + ChatColor.GOLD + "] " + ChatColor.DARK_AQUA + "Question: " + ChatColor.AQUA + this.m_CurrentTrivia.getQuestion());
+			}
+		}
+		catch(IllegalArgumentException e)
+		{
+			String warningMessage = "The trivia category " + category + " was defined, but no trivia was defined for it.";
+
+			TriviaBot.getInstance().getLogger().log(Level.WARNING, warningMessage);
+			throw new IllegalArgumentException(warningMessage, e); // Throw for user feedback for commands.
+		}
+		catch(NullPointerException e)
+		{
+			String warningMessage = "The trivia category " + category + " is not defined.";
+
+			TriviaBot.getInstance().getLogger().log(Level.WARNING, warningMessage);
+			throw new NullPointerException(warningMessage); // Throw for user feedback for commands.
 		}
 	}
 
@@ -98,7 +152,7 @@ public class TriviaHandler implements Listener
 	 * Loads the questions and answers to the handler.
 	 * @param trivia The list of trivia questions to load into the handler.
 	 */
-	void loadTrivia(List<Trivia> trivia)
+	void loadTrivia(Map<String, List<Trivia>> trivia)
 	{
 		this.m_TriviaQuestions = trivia;
 
@@ -129,6 +183,12 @@ public class TriviaHandler implements Listener
 	public boolean isTriviaLooped()
 	{
 		return this.m_IsTriviaLooped;
+	}
+
+	public List<String> getLabels()
+	{
+		Set<String> keys = this.m_TriviaQuestions.keySet();
+		return Arrays.asList(keys.toArray(new String[keys.size()]));
 	}
 
 	public static TriviaHandler getInstance()

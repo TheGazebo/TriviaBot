@@ -15,15 +15,24 @@ public class TriviaToggleLoop implements CommandExecutor
 
         boolean loopStatus = triviaHandler.toggleTriviaLooped();
 
-        // If trivia wasn't yet enabled and the loop is now active feed a trivia question to the players.
-        if(triviaHandler.isTriviaActive() && loopStatus)
-        {
-            triviaHandler.triviaQuestion();
-        }
-
         if(loopStatus)
         {
             sender.sendMessage(ChatColor.GREEN + "Trivia Loop enabled.");
+
+            // If trivia wasn't yet enabled and the loop is now active feed a trivia question to the players.
+            if(!triviaHandler.isTriviaActive())
+            {
+                try
+                {
+                    String category = args.length > 0 ? args[0] : "";
+
+                    triviaHandler.triviaQuestion(category);
+                }
+                catch(Exception e)
+                {
+                    sender.sendMessage(ChatColor.RED + e.getMessage());
+                }
+            }
         }
         else
         {

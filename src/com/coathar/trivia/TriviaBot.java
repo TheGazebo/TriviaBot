@@ -1,9 +1,7 @@
 package com.coathar.trivia;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.io.File;
-import java.util.Arrays;
 import java.util.logging.Logger;
 
 import com.coathar.trivia.commands.TriviaReload;
@@ -59,10 +57,12 @@ public class TriviaBot extends JavaPlugin {
 	 */
 	private void loadTriviaFromConfig()
 	{
-		List<Trivia> trivia = new ArrayList<>();
+		Map<String, List<Trivia>> triviaMap = new HashMap<>();
 
 		for(String label : this.m_Config.getKeys(false))
 		{
+			List<Trivia> trivia = new ArrayList<>();
+
 			for(String triviaKey : this.m_Config.getConfigurationSection(label).getKeys(false))
 			{
 				ConfigurationSection triviaQuestion = this.m_Config.getConfigurationSection(triviaKey);
@@ -76,9 +76,11 @@ public class TriviaBot extends JavaPlugin {
 
 				trivia.add(new Trivia(label, question, answers));
 			}
+
+			triviaMap.put(label, trivia);
 		}
 
-		this.m_TriviaHandler.loadTrivia(trivia);
+		this.m_TriviaHandler.loadTrivia(triviaMap);
 	}
 
 	/**
