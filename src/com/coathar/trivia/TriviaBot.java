@@ -104,11 +104,28 @@ public class TriviaBot extends JavaPlugin {
 	}
 
 	/**
-	 * Broadcasts a question and sets the handler to await an answer
+	 * Broadcasts a question and sets the handler to await an answer.
+	 * @param category The category of the trivia question.
+	 */
+	public void triviaQuestion(String category)
+	{
+		this.m_TriviaHandler.triviaQuestion(category);
+	}
+
+	/**
+	 * Broadcasts a question and sets the handler to await an answer.
 	 */
 	public void triviaQuestion()
 	{
 		this.m_TriviaHandler.triviaQuestion();
+	}
+
+	/**
+	 * Cancels the active trivia question if there is one.
+	 */
+	public void cancelTrivia()
+	{
+		this.m_TriviaHandler.cancelTrivia();
 	}
 
 	@Override

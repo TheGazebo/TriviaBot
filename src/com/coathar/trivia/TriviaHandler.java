@@ -127,6 +127,15 @@ public class TriviaHandler implements Listener
 			}.runTaskLater(TriviaBot.getInstance(), 40);
 	}
 
+	public void cancelTrivia()
+	{
+		if(this.isTriviaActive())
+		{
+			this.m_CurrentTrivia.flagSolved();
+			Bukkit.broadcastMessage(ChatColor.GOLD + "[" + ChatColor.YELLOW + "Trivia Bot" + ChatColor.GOLD + "] " + ChatColor.RED + "The current trivia question has been cancelled.");
+		}
+	}
+
 	@EventHandler
 	public void onPlayerChat(AsyncPlayerChatEvent event)
 	{
