@@ -62,12 +62,12 @@ public class TriviaHandler implements Listener
 
 	/**
 	 * Broadcasts a question and sets the handler to await an answer.
-	 * @param category The category of trivia question to select.
+	 * @param label The type of trivia question to select.
 	 */
-	public void triviaQuestion(String category)
+	public void triviaQuestion(String label)
 	{
 		// Use the wrapper function if the provided key is empty.
-		if(category.isEmpty())
+		if(label.isEmpty())
 		{
 			this.triviaQuestion();
 			return;
@@ -75,8 +75,8 @@ public class TriviaHandler implements Listener
 
 		try
 		{
-			// Select the appropriate category and then a random trivia question within it
-			List<Trivia> questionsToUse = this.m_TriviaQuestions.get(category);
+			// Select the appropriate type and then a random trivia question within it
+			List<Trivia> questionsToUse = this.m_TriviaQuestions.get(label);
 			int index = this.m_RandomGeneration.nextInt(questionsToUse.size());
 			Trivia nextTrivia = questionsToUse.get(index).clone(); // Make sure to clone in order to avoid flagging the questions in the list.
 
@@ -87,19 +87,23 @@ public class TriviaHandler implements Listener
 			{
 				this.m_CurrentTrivia = nextTrivia;
 				String prefix = this.m_Prefixes.get(this.m_CurrentTrivia.getLabel());
+
+				if(!this.m_CurrentTrivia.getCategory().isEmpty())
+					Bukkit.broadcastMessage(prefix + " " + ChatColor.DARK_AQUA + "The category is: " + ChatColor.AQUA + this.m_CurrentTrivia.getQuestion());
+
 				Bukkit.broadcastMessage(prefix + " " + ChatColor.DARK_AQUA + "Question: " + ChatColor.AQUA + this.m_CurrentTrivia.getQuestion());
 			}
 		}
 		catch(IllegalArgumentException e)
 		{
-			String warningMessage = "The trivia category " + category + " was defined, but no trivia was defined for it.";
+			String warningMessage = "The trivia type " + label + " was defined, but no trivia was defined for it.";
 
 			TriviaBot.getInstance().getLogger().log(Level.WARNING, warningMessage);
 			throw new IllegalArgumentException(warningMessage, e); // Throw for user feedback for commands.
 		}
 		catch(NullPointerException e)
 		{
-			String warningMessage = "The trivia category " + category + " is not defined.";
+			String warningMessage = "The trivia type " + label + " is not defined.";
 
 			TriviaBot.getInstance().getLogger().log(Level.WARNING, warningMessage);
 			throw new NullPointerException(warningMessage); // Throw for user feedback for commands.
@@ -136,7 +140,7 @@ public class TriviaHandler implements Listener
 		{
 			this.m_CurrentTrivia.flagSolved();
 			String prefix = this.m_Prefixes.get(this.m_CurrentTrivia.getLabel());
-			Bukkit.broadcastMessage(prefix + " " + ChatColor.RED + "The current trivia question has been cancelled.");
+			Bukkit.broadcastMessage(prefix + " " + ChatColor.RED + "The current trivia question has been cancelled. The correct answer was: " + this.m_CurrentTrivia.getAnswers().get(0));
 		}
 	}
 

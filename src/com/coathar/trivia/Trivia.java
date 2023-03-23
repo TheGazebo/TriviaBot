@@ -5,14 +5,16 @@ import java.util.List;
 public class Trivia implements Cloneable
 {
     private final String m_Label;
+    private final String m_Category;
     private final String m_Question;
     private final List<String> m_Answers;
 
     private boolean m_IsSolved;
 
-    public Trivia(String label, String question, List<String> answers)
+    public Trivia(String label, String category, String question, List<String> answers)
     {
         this.m_Label = label;
+        this.m_Category = category;
         this.m_Question = question;
         this.m_Answers = answers;
 
@@ -22,6 +24,11 @@ public class Trivia implements Cloneable
     public String getLabel()
     {
         return this.m_Label;
+    }
+
+    public String getCategory()
+    {
+        return this.m_Category;
     }
 
     public String getQuestion()
@@ -62,6 +69,6 @@ public class Trivia implements Cloneable
     @Override
     public Trivia clone()
     {
-        return new Trivia(m_Label, m_Question, m_Answers);
+        return new Trivia(m_Label, m_Category, m_Question, m_Answers);
     }
 }

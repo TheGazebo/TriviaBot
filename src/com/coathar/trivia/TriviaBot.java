@@ -62,13 +62,13 @@ public class TriviaBot extends JavaPlugin {
 		Map<String, String> prefixMap = new HashMap<>();
 		Map<String, List<Trivia>> triviaMap = new HashMap<>();
 
-		for(String category : this.m_Config.getKeys(false))
+		for(String label : this.m_Config.getKeys(false))
 		{
 			List<Trivia> trivia = new ArrayList<>();
-			ConfigurationSection categorySection = this.m_Config.getConfigurationSection(category);
-			ConfigurationSection questionsSection = categorySection.getConfigurationSection("trivia-questions");
+			ConfigurationSection typeSection = this.m_Config.getConfigurationSection(label);
+			ConfigurationSection questionsSection = typeSection.getConfigurationSection("trivia-questions");
 
-			prefixMap.put(category, ChatColor.translateAlternateColorCodes('&', categorySection.getString("prefix")));
+			prefixMap.put(label, ChatColor.translateAlternateColorCodes('&', typeSection.getString("prefix")));
 
 			for(String triviaKey : questionsSection.getKeys(false))
 			{
@@ -76,6 +76,7 @@ public class TriviaBot extends JavaPlugin {
 
 				try
 				{
+					String category = triviaQuestion.getString("category", "");
 					String question = triviaQuestion.getString("question");
 					List<String> answers = triviaQuestion.getStringList("answers");
 
@@ -83,15 +84,15 @@ public class TriviaBot extends JavaPlugin {
 					if(question.isEmpty() || answers.size() == 0)
 						continue;
 
-					trivia.add(new Trivia(category, question, answers));
+					trivia.add(new Trivia(label, category, question, answers));
 				}
 				catch(NullPointerException e)
 				{
-					m_Logger.log(Level.WARNING, "Failed to load trivia question of category " + category + " with key " + triviaKey + ".");
+					m_Logger.log(Level.WARNING, "Failed to load trivia question of type " + label + " with key " + triviaKey + ".");
 				}
 			}
 
-			triviaMap.put(category, trivia);
+			triviaMap.put(label, trivia);
 		}
 
 		this.m_TriviaHandler.loadTrivia(triviaMap, prefixMap);
@@ -110,11 +111,11 @@ public class TriviaBot extends JavaPlugin {
 
 	/**
 	 * Broadcasts a question and sets the handler to await an answer.
-	 * @param category The category of the trivia question.
+	 * @param label The type of the trivia question.
 	 */
-	public void triviaQuestion(String category)
+	public void triviaQuestion(String label)
 	{
-		this.m_TriviaHandler.triviaQuestion(category);
+		this.m_TriviaHandler.triviaQuestion(label);
 	}
 
 	/**
