@@ -8,6 +8,7 @@ import java.util.logging.Logger;
 import com.coathar.trivia.commands.TriviaReload;
 import com.coathar.trivia.commands.TriviaStart;
 import com.coathar.trivia.commands.TriviaToggleLoop;
+import net.md_5.bungee.api.ChatColor;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -58,16 +59,20 @@ public class TriviaBot extends JavaPlugin {
 	 */
 	private void loadTriviaFromConfig()
 	{
+		Map<String, String> prefixMap = new HashMap<>();
 		Map<String, List<Trivia>> triviaMap = new HashMap<>();
 
 		for(String category : this.m_Config.getKeys(false))
 		{
 			List<Trivia> trivia = new ArrayList<>();
 			ConfigurationSection categorySection = this.m_Config.getConfigurationSection(category);
+			ConfigurationSection questionsSection = categorySection.getConfigurationSection("trivia-questions");
 
-			for(String triviaKey : this.m_Config.getConfigurationSection(category).getKeys(false))
+			prefixMap.put(category, ChatColor.translateAlternateColorCodes('&', categorySection.getString("prefix")));
+
+			for(String triviaKey : questionsSection.getKeys(false))
 			{
-				ConfigurationSection triviaQuestion = categorySection.getConfigurationSection(triviaKey);
+				ConfigurationSection triviaQuestion = questionsSection.getConfigurationSection(triviaKey);
 
 				try
 				{
@@ -89,7 +94,7 @@ public class TriviaBot extends JavaPlugin {
 			triviaMap.put(category, trivia);
 		}
 
-		this.m_TriviaHandler.loadTrivia(triviaMap);
+		this.m_TriviaHandler.loadTrivia(triviaMap, prefixMap);
 	}
 
 	/**

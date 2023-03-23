@@ -21,6 +21,7 @@ public class TriviaHandler implements Listener
 	private Random  m_RandomGeneration;
 
 	private Map<String, List<Trivia>> m_TriviaQuestions;
+	private Map<String, String> m_Prefixes;
 
 	private Trivia m_CurrentTrivia;
 	private boolean m_IsTriviaLooped;
@@ -85,7 +86,8 @@ public class TriviaHandler implements Listener
 			if(!event.isCancelled())
 			{
 				this.m_CurrentTrivia = nextTrivia;
-				Bukkit.broadcastMessage(ChatColor.GOLD + "[" + ChatColor.YELLOW + "Trivia Bot" + ChatColor.GOLD + "] " + ChatColor.DARK_AQUA + "Question: " + ChatColor.AQUA + this.m_CurrentTrivia.getQuestion());
+				String prefix = this.m_Prefixes.get(this.m_CurrentTrivia.getLabel());
+				Bukkit.broadcastMessage(prefix + " " + ChatColor.DARK_AQUA + "Question: " + ChatColor.AQUA + this.m_CurrentTrivia.getQuestion());
 			}
 		}
 		catch(IllegalArgumentException e)
@@ -113,7 +115,8 @@ public class TriviaHandler implements Listener
 		TriviaSolvedEvent event = new TriviaSolvedEvent(player, this.m_CurrentTrivia);
 		Bukkit.getPluginManager().callEvent(event);
 
-		Bukkit.broadcastMessage(ChatColor.GOLD + "[" + ChatColor.YELLOW + "Trivia Bot" + ChatColor.GOLD + "] " + ChatColor.GREEN + player.getName() +
+		String prefix = this.m_Prefixes.get(this.m_CurrentTrivia.getLabel());
+		Bukkit.broadcastMessage(prefix + " " + ChatColor.GREEN + player.getName() +
 				ChatColor.DARK_GREEN + " wins! The correct answer was: " + ChatColor.GREEN + this.m_CurrentTrivia.getAnswers().get(0));
 
 		if(this.m_IsTriviaLooped)
@@ -132,7 +135,8 @@ public class TriviaHandler implements Listener
 		if(this.isTriviaActive())
 		{
 			this.m_CurrentTrivia.flagSolved();
-			Bukkit.broadcastMessage(ChatColor.GOLD + "[" + ChatColor.YELLOW + "Trivia Bot" + ChatColor.GOLD + "] " + ChatColor.RED + "The current trivia question has been cancelled.");
+			String prefix = this.m_Prefixes.get(this.m_CurrentTrivia.getLabel());
+			Bukkit.broadcastMessage(prefix + " " + ChatColor.RED + "The current trivia question has been cancelled.");
 		}
 	}
 
@@ -161,9 +165,10 @@ public class TriviaHandler implements Listener
 	 * Loads the questions and answers to the handler.
 	 * @param trivia The list of trivia questions to load into the handler.
 	 */
-	void loadTrivia(Map<String, List<Trivia>> trivia)
+	void loadTrivia(Map<String, List<Trivia>> trivia, Map<String, String> prefixes)
 	{
 		this.m_TriviaQuestions = trivia;
+		this.m_Prefixes = prefixes;
 
 		TriviaBot.getInstance().getLogger().log(Level.INFO, "Loaded " + this.m_TriviaQuestions.size() + " trivia questions.");
 	}
