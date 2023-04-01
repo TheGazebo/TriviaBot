@@ -1,6 +1,7 @@
 package com.coathar.trivia.commands;
 
 import com.coathar.trivia.TriviaHandler;
+import com.coathar.trivia.TriviaType;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -27,9 +28,10 @@ public class TriviaStart implements CommandExecutor, TabCompleter
         {
             try
             {
-                String category = args.length > 0 ? args[0] : "";
+                String type = args.length > 0 ? args[0] : "";
+                String category = args.length > 1 ? args[1] : "";
 
-                triviaHandler.triviaQuestion(category);
+                triviaHandler.triviaQuestion(type, category);
             }
             catch(Exception e)
             {
@@ -55,9 +57,20 @@ public class TriviaStart implements CommandExecutor, TabCompleter
 
         if(args.length == 1)
         {
-            final List<String> options = TriviaHandler.getInstance().getLabels();
+            final List<String> options = TriviaHandler.getInstance().getTriviaTypeKeys();
             StringUtil.copyPartialMatches(args[0], options, completions);
             Collections.sort(completions);
+        }
+        else if(args.length == 2)
+        {
+            TriviaType type = TriviaHandler.getInstance().getTriviaType(args[1]);
+
+            if(type != null)
+            {
+                final List<String> options = type.getCategoryKeys();
+                StringUtil.copyPartialMatches(args[1], options, completions);
+                Collections.sort(completions);
+            }
         }
 
         return completions;

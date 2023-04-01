@@ -4,31 +4,24 @@ import java.util.List;
 
 public class Trivia implements Cloneable
 {
-    private final String m_Label;
-    private final String m_Category;
+    private final String m_Name;
     private final String m_Question;
     private final List<String> m_Answers;
 
     private boolean m_IsSolved;
 
-    public Trivia(String label, String category, String question, List<String> answers)
+    public Trivia(String name, String question, List<String> answers)
     {
-        this.m_Label = label;
-        this.m_Category = category;
+        this.m_Name = name;
         this.m_Question = question;
         this.m_Answers = answers;
 
         this.m_IsSolved = false;
-    }
 
-    public String getLabel()
-    {
-        return this.m_Label;
-    }
-
-    public String getCategory()
-    {
-        return this.m_Category;
+        if(question.isEmpty())
+            throw new IllegalStateException("No question has been defined for the Trivia " + name + ".");
+        else if(answers.size() == 0)
+            throw new IllegalStateException("No answers have been defined for the Trivia " + name + ".");
     }
 
     public String getQuestion()
@@ -41,8 +34,11 @@ public class Trivia implements Cloneable
         return this.m_Answers;
     }
 
-    public boolean isAnswer(String str)
+    public boolean isAnswer(String str, boolean requiresGlobal)
     {
+        if(requiresGlobal && str.charAt(0) != '!')
+            return false;
+
         // Loop over answers and compare
         for(String answer : this.m_Answers)
         {
@@ -69,6 +65,6 @@ public class Trivia implements Cloneable
     @Override
     public Trivia clone()
     {
-        return new Trivia(m_Label, m_Category, m_Question, m_Answers);
+        return new Trivia(m_Name, m_Question, m_Answers);
     }
 }

@@ -63,7 +63,7 @@ public class TriviaToggleLoop implements CommandExecutor, TabCompleter
 
         if(args.length == 1)
         {
-            final List<String> options = TriviaHandler.getInstance().getLabels();
+            final List<String> options = TriviaHandler.getInstance().getTriviaTypeKeys();
             StringUtil.copyPartialMatches(args[0], options, completions);
             Collections.sort(completions);
         }

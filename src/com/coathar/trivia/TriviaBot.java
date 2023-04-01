@@ -59,43 +59,79 @@ public class TriviaBot extends JavaPlugin {
 	 */
 	private void loadTriviaFromConfig()
 	{
-		Map<String, String> prefixMap = new HashMap<>();
-		Map<String, List<Trivia>> triviaMap = new HashMap<>();
+		Map<String, TriviaType> triviaMap = new HashMap<>();
 
+		// Load trivia by usage: dvz, april event, jeopardy
 		for(String label : this.m_Config.getKeys(false))
 		{
-			List<Trivia> trivia = new ArrayList<>();
+			Map<String, Category> categories = new HashMap<String, Category>();
+
 			ConfigurationSection typeSection = this.m_Config.getConfigurationSection(label);
-			ConfigurationSection questionsSection = typeSection.getConfigurationSection("trivia-questions");
+			ConfigurationSection categorySection = typeSection.getConfigurationSection("categories");
 
-			prefixMap.put(label, ChatColor.translateAlternateColorCodes('&', typeSection.getString("prefix")));
+			String prefix = ChatColor.translateAlternateColorCodes('&',
+					typeSection.getString("prefix", "&6[&eTrivia Bot&6]")); // The prefix to display before the question. Replaces [Trivia Bot].
+			boolean showCategories = typeSection.getBoolean("show-categories", false); // Whether the categories will be displayed before each question.
+			boolean requireGlobal = typeSection.getBoolean("require-global", false); // Whether the categories will be displayed before each question.
+			boolean refreshQuestions = typeSection.getBoolean("refresh-questions", true); // Whether the categories will refresh these questions once all questions have been exhausted.
 
-			for(String triviaKey : questionsSection.getKeys(false))
+			// Load each category under the main label
+			for(String categoryKey : categorySection.getKeys(false))
 			{
-				ConfigurationSection triviaQuestion = questionsSection.getConfigurationSection(triviaKey);
+				ConfigurationSection questionsSection = categorySection.getConfigurationSection(categoryKey);
+				ArrayList<Trivia> trivia = new ArrayList<>();
+
+				// Load each trivia question
+				for(String triviaKey : questionsSection.getKeys(false))
+				{
+					ConfigurationSection triviaQuestion = questionsSection.getConfigurationSection(triviaKey);
+
+					try
+					{
+						String question = triviaQuestion.getString("question");
+						List<String> answers = triviaQuestion.getStringList("answers");
+
+						trivia.add(new Trivia(triviaKey, question, answers));
+					}
+					catch(IllegalStateException e)
+					{
+						// Log this error and skip loading this question.
+						this.m_Logger.log(Level.WARNING, e.getMessage());
+					}
+				}
 
 				try
 				{
-					String category = triviaQuestion.getString("category", "");
-					String question = triviaQuestion.getString("question");
-					List<String> answers = triviaQuestion.getStringList("answers");
-
-					// Avoid empty trivia questions
-					if(question.isEmpty() || answers.size() == 0)
-						continue;
-
-					trivia.add(new Trivia(label, category, question, answers));
+					categories.put(categoryKey, new Category(categoryKey, refreshQuestions, trivia));
 				}
-				catch(NullPointerException e)
+				catch(IllegalStateException e)
 				{
-					m_Logger.log(Level.WARNING, "Failed to load trivia question of type " + label + " with key " + triviaKey + ".");
+					// Log this error and skip loading this category.
+					this.m_Logger.log(Level.WARNING, e.getMessage());
 				}
+
 			}
 
-			triviaMap.put(label, trivia);
+			try
+			{
+				TriviaType triviaType = new TriviaType(label, prefix, showCategories, requireGlobal, categories);
+				triviaMap.put(label, triviaType);
+			}
+			catch(IllegalStateException e)
+			{
+				// Log this error and skip loading this type.
+				this.m_Logger.log(Level.WARNING, e.getMessage());
+			}
 		}
 
-		this.m_TriviaHandler.loadTrivia(triviaMap, prefixMap);
+		try
+		{
+			this.m_TriviaHandler.loadTrivia(triviaMap);
+		}
+		catch(IllegalStateException e)
+		{
+			this.m_Logger.log(Level.WARNING, "No trivia has been defined. The plugin has failed to load.");
+		}
 	}
 
 	/**
@@ -107,6 +143,16 @@ public class TriviaBot extends JavaPlugin {
 		this.reloadConfig();
 		this.m_Config = this.getConfig();
 		this.loadTriviaFromConfig();
+	}
+
+	/**
+	 * Broadcasts a question and sets the handler to await an answer.
+	 * @param label The type of the trivia question.
+	 * @param category The category for the trivia question
+	 */
+	public void triviaQuestion(String label, String category)
+	{
+		this.m_TriviaHandler.triviaQuestion(label, category);
 	}
 
 	/**

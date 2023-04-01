@@ -18,17 +18,16 @@ public class TriviaHandler implements Listener
 {
 	private static volatile TriviaHandler m_UniqueInstance;
 
-	private Random  m_RandomGeneration;
+	private Map<String, TriviaType> m_AvailableTrivia;
 
-	private Map<String, List<Trivia>> m_TriviaQuestions;
-	private Map<String, String> m_Prefixes;
+	private TriviaType m_LastTriviaType;
+	private Category m_LastCategory;
+	private Trivia m_LastQuestion;
 
-	private Trivia m_CurrentTrivia;
 	private boolean m_IsTriviaLooped;
 
 	public TriviaHandler()
 	{
-		this.m_RandomGeneration = new Random();
 		Bukkit.getPluginManager().registerEvents(this, TriviaBot.getInstance());
 	}
 
@@ -40,34 +39,30 @@ public class TriviaHandler implements Listener
 	 */
 	public void triviaQuestion()
 	{
-		if(this.m_CurrentTrivia != null)
+		if(this.m_LastTriviaType != null)
 		{
-			this.triviaQuestion(this.m_CurrentTrivia.getLabel());
+			this.triviaQuestion(this.m_LastTriviaType.getLabel(), "");
 		}
 		else
 		{
-			try
-			{
-				this.triviaQuestion(this.getLabels().get(0));
-			}
-			catch(IndexOutOfBoundsException e)
-			{
-				String warningMessage = "No trivia categories found. No trivia has been defined when attempting to start trivia.";
-
-				TriviaBot.getInstance().getLogger().log(Level.WARNING, warningMessage);
-				throw new IndexOutOfBoundsException(warningMessage); // Throw for user feedback for commands.
-			}
+			this.triviaQuestion(this.getTriviaTypeKeys().get(0), "");
 		}
+	}
+
+	public void triviaQuestion(String typeKey)
+	{
+		this.triviaQuestion(typeKey, "");
 	}
 
 	/**
 	 * Broadcasts a question and sets the handler to await an answer.
-	 * @param label The type of trivia question to select.
+	 * @param typeKey The type of trivia question to select.
+	 * @param categoryKey The category to use.
 	 */
-	public void triviaQuestion(String label)
+	public void triviaQuestion(String typeKey, String categoryKey)
 	{
 		// Use the wrapper function if the provided key is empty.
-		if(label.isEmpty())
+		if(typeKey.isEmpty())
 		{
 			this.triviaQuestion();
 			return;
@@ -76,34 +71,31 @@ public class TriviaHandler implements Listener
 		try
 		{
 			// Select the appropriate type and then a random trivia question within it
-			List<Trivia> questionsToUse = this.m_TriviaQuestions.get(label);
-			int index = this.m_RandomGeneration.nextInt(questionsToUse.size());
-			Trivia nextTrivia = questionsToUse.get(index).clone(); // Make sure to clone in order to avoid flagging the questions in the list.
+			TriviaType triviaType = this.m_AvailableTrivia.get(typeKey);
+			this.m_LastCategory = categoryKey.isEmpty() ? triviaType.pollCategory() : triviaType.pollCategory(categoryKey);
+			this.m_LastQuestion = this.m_LastCategory.pollQuestion();
 
-			TriviaFireEvent event = new TriviaFireEvent(nextTrivia);
+			TriviaFireEvent event = new TriviaFireEvent(triviaType);
 			Bukkit.getPluginManager().callEvent(event);
 
 			if(!event.isCancelled())
 			{
-				this.m_CurrentTrivia = nextTrivia;
-				String prefix = this.m_Prefixes.get(this.m_CurrentTrivia.getLabel());
+				this.m_LastTriviaType = triviaType;
 
-				if(!this.m_CurrentTrivia.getCategory().isEmpty())
-					Bukkit.broadcastMessage(prefix + " " + ChatColor.DARK_AQUA + "The category is: " + ChatColor.AQUA + this.m_CurrentTrivia.getQuestion());
+				if(triviaType.showCategory())
+					Bukkit.broadcastMessage(triviaType.getPrefix() + " " + ChatColor.DARK_AQUA + "The category is: " + ChatColor.AQUA + this.m_LastCategory.getName());
 
-				Bukkit.broadcastMessage(prefix + " " + ChatColor.DARK_AQUA + "Question: " + ChatColor.AQUA + this.m_CurrentTrivia.getQuestion());
+				Bukkit.broadcastMessage(triviaType.getPrefix() + " " + ChatColor.DARK_AQUA + "Question: " + ChatColor.AQUA + this.m_LastQuestion.getQuestion());
 			}
 		}
-		catch(IllegalArgumentException e)
+		catch(IllegalArgumentException | IllegalStateException | IndexOutOfBoundsException e)
 		{
-			String warningMessage = "The trivia type " + label + " was defined, but no trivia was defined for it.";
-
-			TriviaBot.getInstance().getLogger().log(Level.WARNING, warningMessage);
-			throw new IllegalArgumentException(warningMessage, e); // Throw for user feedback for commands.
+			TriviaBot.getInstance().getLogger().log(Level.WARNING, e.getMessage());
+			throw e; // Throw for user feedback for commands.
 		}
 		catch(NullPointerException e)
 		{
-			String warningMessage = "The trivia type " + label + " is not defined.";
+			String warningMessage = "The trivia type " + typeKey + " is not defined.";
 
 			TriviaBot.getInstance().getLogger().log(Level.WARNING, warningMessage);
 			throw new NullPointerException(warningMessage); // Throw for user feedback for commands.
@@ -116,12 +108,13 @@ public class TriviaHandler implements Listener
 	 */
 	private void answerQuestion(Player player)
 	{
-		TriviaSolvedEvent event = new TriviaSolvedEvent(player, this.m_CurrentTrivia);
+		TriviaSolvedEvent event = new TriviaSolvedEvent(player, this.m_LastTriviaType);
 		Bukkit.getPluginManager().callEvent(event);
 
-		String prefix = this.m_Prefixes.get(this.m_CurrentTrivia.getLabel());
-		Bukkit.broadcastMessage(prefix + " " + ChatColor.GREEN + player.getName() +
-				ChatColor.DARK_GREEN + " wins! The correct answer was: " + ChatColor.GREEN + this.m_CurrentTrivia.getAnswers().get(0));
+		String answer = this.m_LastQuestion.getAnswers().get(0);
+
+		Bukkit.broadcastMessage(this.m_LastTriviaType.getPrefix() + " " + ChatColor.GREEN + player.getName() +
+				ChatColor.DARK_GREEN + " wins! The correct answer was: " + ChatColor.GREEN + answer);
 
 		if(this.m_IsTriviaLooped)
 			new BukkitRunnable()
@@ -138,9 +131,10 @@ public class TriviaHandler implements Listener
 	{
 		if(this.isTriviaActive())
 		{
-			this.m_CurrentTrivia.flagSolved();
-			String prefix = this.m_Prefixes.get(this.m_CurrentTrivia.getLabel());
-			Bukkit.broadcastMessage(prefix + " " + ChatColor.RED + "The current trivia question has been cancelled. The correct answer was: " + this.m_CurrentTrivia.getAnswers().get(0));
+			this.m_LastQuestion.flagSolved();
+
+			Bukkit.broadcastMessage(this.m_LastTriviaType.getPrefix() + " " + ChatColor.RED +
+					"The current trivia question has been cancelled. The correct answer was: " + this.m_LastQuestion.getAnswers().get(0));
 		}
 	}
 
@@ -150,9 +144,9 @@ public class TriviaHandler implements Listener
 		Player player  = event.getPlayer();
 		String message = event.getMessage();
 
-		if(event.isAsynchronous() && !this.m_CurrentTrivia.isSolved() && this.m_CurrentTrivia.isAnswer(message))
+		if(event.isAsynchronous() && !this.m_LastQuestion.isSolved() && this.m_LastQuestion.isAnswer(message, this.m_LastTriviaType.requireGlobal()))
 		{
-			this.m_CurrentTrivia.flagSolved();
+			this.m_LastQuestion.flagSolved();
 
 			new BukkitRunnable()
 			{
@@ -169,12 +163,11 @@ public class TriviaHandler implements Listener
 	 * Loads the questions and answers to the handler.
 	 * @param trivia The list of trivia questions to load into the handler.
 	 */
-	void loadTrivia(Map<String, List<Trivia>> trivia, Map<String, String> prefixes)
+	void loadTrivia(Map<String, TriviaType> trivia)
 	{
-		this.m_TriviaQuestions = trivia;
-		this.m_Prefixes = prefixes;
+		this.m_AvailableTrivia = trivia;
 
-		TriviaBot.getInstance().getLogger().log(Level.INFO, "Loaded " + this.m_TriviaQuestions.size() + " trivia questions.");
+		TriviaBot.getInstance().getLogger().log(Level.INFO, "Loaded " + this.m_AvailableTrivia.size() + " trivia types.");
 	}
 
 	/**
@@ -192,7 +185,7 @@ public class TriviaHandler implements Listener
 	 */
 	public boolean isTriviaActive()
 	{
-		return this.m_CurrentTrivia != null && !this.m_CurrentTrivia.isSolved();
+		return this.m_LastTriviaType != null && !this.m_LastQuestion.isSolved();
 	}
 
 	/**
@@ -203,10 +196,15 @@ public class TriviaHandler implements Listener
 		return this.m_IsTriviaLooped;
 	}
 
-	public List<String> getLabels()
+	public List<String> getTriviaTypeKeys()
 	{
-		Set<String> keys = this.m_TriviaQuestions.keySet();
+		Set<String> keys = this.m_AvailableTrivia.keySet();
 		return Arrays.asList(keys.toArray(new String[keys.size()]));
+	}
+
+	public TriviaType getTriviaType(String key)
+	{
+		return key.isEmpty() ? this.m_AvailableTrivia.get(this.getTriviaTypeKeys().get(0)) : this.m_AvailableTrivia.get(key);
 	}
 
 	public static TriviaHandler getInstance()
