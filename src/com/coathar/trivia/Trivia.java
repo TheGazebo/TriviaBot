@@ -39,12 +39,12 @@ public class Trivia implements Cloneable
         if(requiresGlobal && str.charAt(0) != '!')
             return false;
 
+        if(str.charAt(0) == '!' && str.length() > 1)
+            str = str.substring(1);
+
         // Loop over answers and compare
         for(String answer : this.m_Answers)
         {
-            if(answer.charAt(0) == '!' && answer.length() > 1)
-                answer = answer.substring(1);
-
             if(answer.equalsIgnoreCase(str))
                 return true;
         }

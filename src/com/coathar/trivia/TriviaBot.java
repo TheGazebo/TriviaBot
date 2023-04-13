@@ -1,7 +1,7 @@
 package com.coathar.trivia;
 
+import java.io.*;
 import java.util.*;
-import java.io.File;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -47,6 +47,12 @@ public class TriviaBot extends JavaPlugin {
 		}
 
 		this.m_TriviaHandler = TriviaHandler.getInstance();
+
+		/*try {
+			this.importTriviaFromCSV("trivia.csv");
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}*/
 		this.loadTriviaFromConfig();
 
 		this.registerCommands();
@@ -67,7 +73,7 @@ public class TriviaBot extends JavaPlugin {
 			Map<String, Category> categories = new HashMap<String, Category>();
 
 			ConfigurationSection typeSection = this.m_Config.getConfigurationSection(label);
-			ConfigurationSection categorySection = typeSection.getConfigurationSection("categories");
+			ConfigurationSection categoiesSection = typeSection.getConfigurationSection("categories");
 
 			String prefix = ChatColor.translateAlternateColorCodes('&',
 					typeSection.getString("prefix", "&6[&eTrivia Bot&6]")); // The prefix to display before the question. Replaces [Trivia Bot].
@@ -76,9 +82,12 @@ public class TriviaBot extends JavaPlugin {
 			boolean refreshQuestions = typeSection.getBoolean("refresh-questions", true); // Whether the categories will refresh these questions once all questions have been exhausted.
 
 			// Load each category under the main label
-			for(String categoryKey : categorySection.getKeys(false))
+			for(String categoryKey : categoiesSection.getKeys(false))
 			{
-				ConfigurationSection questionsSection = categorySection.getConfigurationSection(categoryKey);
+				ConfigurationSection categorySection = categoiesSection.getConfigurationSection(categoryKey);
+				String categoryName = categorySection.getString("category-name", "");
+
+				ConfigurationSection questionsSection = categorySection.getConfigurationSection("questions");
 				ArrayList<Trivia> trivia = new ArrayList<>();
 
 				// Load each trivia question
@@ -102,7 +111,7 @@ public class TriviaBot extends JavaPlugin {
 
 				try
 				{
-					categories.put(categoryKey, new Category(categoryKey, refreshQuestions, trivia));
+					categories.put(categoryKey, new Category(categoryName, refreshQuestions, trivia));
 				}
 				catch(IllegalStateException e)
 				{
@@ -132,6 +141,84 @@ public class TriviaBot extends JavaPlugin {
 		{
 			this.m_Logger.log(Level.WARNING, "No trivia has been defined. The plugin has failed to load.");
 		}
+	}
+
+	private void importTriviaFromCSV(String fileName) throws IOException
+	{
+
+		File file = new File(getDataFolder(), fileName);
+
+		// If the configuration file does not exist set up a default question to show the user how to format the file.
+		if(file.exists())
+		{
+			HashMap<String, ArrayList<Tuple<String, String>>> map = this.readFromCSV(file);
+
+			ConfigurationSection newType = this.m_Config.createSection(fileName.replaceAll("[^\\p{Alnum}\n\r]", ""));
+
+			newType.set("prefix", "&6[&eGazebob&6]");
+			newType.set("show-categories", true);
+			newType.set("require-global", true);
+			newType.set("refresh-questions", true);
+
+			ConfigurationSection categories = newType.createSection("categories");
+
+			for(String catKey : map.keySet())
+			{
+				String newKey = catKey.replaceAll("[^\\p{Alnum}\n\r]", "");
+				ConfigurationSection section = categories.createSection(newKey);
+
+				section.set("category-name", catKey);
+				section.createSection("questions");
+			}
+
+			for(Map.Entry<String, ArrayList<Tuple<String, String>>> entry : map.entrySet())
+			{
+				String catKey = entry.getKey().replaceAll("[^\\p{Alnum}\n\r]", "");
+				ConfigurationSection section = categories.getConfigurationSection(catKey).getConfigurationSection("questions");
+
+				int i = 0;
+				for(Tuple<String, String> question : entry.getValue())
+				{
+					ConfigurationSection newQuestion = section.createSection("question" + i);
+					newQuestion.set("question", question.getFirstValue());
+					newQuestion.set("answers", Arrays.asList(question.getSecondValue()));
+
+					i++;
+				}
+			}
+
+			saveConfig();
+
+			this.m_Logger.warning("Finished importing " + fileName + ".");
+		}
+		else
+		{
+			return;
+		}
+	}
+
+	private HashMap<String, ArrayList<Tuple<String, String>>> readFromCSV(File file) throws IOException
+	{
+		HashMap<String, ArrayList<Tuple<String, String>>> map = new HashMap<String, ArrayList<Tuple<String, String>>>();
+
+		BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file)));
+
+		String line = reader.readLine();
+
+		while (line != null)
+		{
+			String[] split = line.split(",(?=([^\"]*\"[^\"]*\")*[^\"]*$)");
+
+			ArrayList<Tuple<String, String>> list = map.getOrDefault(split[0], new ArrayList<Tuple<String, String>>());
+
+			list.add(new Tuple(split[1], split[2]));
+
+			map.put(split[0], list);
+
+			line = reader.readLine();
+		}
+
+		return map;
 	}
 
 	/**

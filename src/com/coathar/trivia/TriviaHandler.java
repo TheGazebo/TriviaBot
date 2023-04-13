@@ -72,15 +72,17 @@ public class TriviaHandler implements Listener
 		{
 			// Select the appropriate type and then a random trivia question within it
 			TriviaType triviaType = this.m_AvailableTrivia.get(typeKey);
-			this.m_LastCategory = categoryKey.isEmpty() ? triviaType.pollCategory() : triviaType.pollCategory(categoryKey);
-			this.m_LastQuestion = this.m_LastCategory.pollQuestion();
+			Category category = categoryKey.isEmpty() ? triviaType.pollCategory() : triviaType.pollCategory(categoryKey);
+			Trivia question = category.pollQuestion();
 
-			TriviaFireEvent event = new TriviaFireEvent(triviaType);
+			TriviaFireEvent event = new TriviaFireEvent(triviaType, category, question);
 			Bukkit.getPluginManager().callEvent(event);
 
 			if(!event.isCancelled())
 			{
 				this.m_LastTriviaType = triviaType;
+				this.m_LastCategory = category;
+				this.m_LastQuestion = question;
 
 				if(triviaType.showCategory())
 					Bukkit.broadcastMessage(triviaType.getPrefix() + " " + ChatColor.DARK_AQUA + "The category is: " + ChatColor.AQUA + this.m_LastCategory.getName());
@@ -144,7 +146,7 @@ public class TriviaHandler implements Listener
 		Player player  = event.getPlayer();
 		String message = event.getMessage();
 
-		if(event.isAsynchronous() && !this.m_LastQuestion.isSolved() && this.m_LastQuestion.isAnswer(message, this.m_LastTriviaType.requireGlobal()))
+		if(event.isAsynchronous() && this.m_LastQuestion != null && !this.m_LastQuestion.isSolved() && this.m_LastQuestion.isAnswer(message, this.m_LastTriviaType.requireGlobal()))
 		{
 			this.m_LastQuestion.flagSolved();
 

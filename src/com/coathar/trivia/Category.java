@@ -64,7 +64,7 @@ public class Category {
             index = random.nextInt(this.m_RemainingTrivia.size()); // [0, Size)
         }
 
-        this.m_LastTrivia = this.m_RemainingTrivia.get(index);
+        this.m_LastTrivia = this.m_RemainingTrivia.get(index).clone();
         this.m_RemainingTrivia.remove(index); // Remove to avoid repeating questions
 
         // No trivia is left, attempt to refresh if applicable
